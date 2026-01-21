@@ -3,6 +3,22 @@ services:
     build: .
     ports:
       - "3000:3000"
-    environment:
-      - PORT=3000
     restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Berlin
+      - PORT=3000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kemono-rss.entrypoints=https"
+      - "traefik.http.routers.kemono-rss.rule=Host(`kemono.yigit.link`)"
+      - "traefik.http.routers.kemono-rss.tls=true"
+      - "traefik.http.routers.kemono-rss.tls.certresolver=http"
+      - "traefik.http.routers.kemono-rss.service=kemono-rss"
+      - "traefik.http.services.kemono-rss.loadbalancer.server.port=3000"
+      - "traefik.docker.network=proxy"
+
+networks:
+  proxy:
+    external: true
