@@ -3,27 +3,41 @@ import { generatePodcastRss } from './rss';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
+console.log(`[DEBUG] Starting server on port ${PORT}`);
+console.log(`[DEBUG] Environment:`, {
+  PORT: process.env.PORT,
+  NODE_ENV: process.env.NODE_ENV,
+  TZ: process.env.TZ
+});
+
 const server = Bun.serve({
   port: PORT,
   async fetch(req) {
     const url = new URL(req.url);
     const path = url.pathname;
+    
+    console.log(`[DEBUG] Incoming request: ${req.method} ${path}`);
 
     // Route: /get/:service/:creatorId
     const match = path.match(/^\/get\/([^\/]+)\/([^\/]+)$/);
     
     if (match) {
       const [, service, creatorId] = match;
+      console.log(`[DEBUG] Matched route - service: ${service}, creatorId: ${creatorId}`);
       
       try {
+        console.log(`[DEBUG] Fetching profile and posts...`);
         // Fetch creator profile and posts in parallel
         const [profile, posts] = await Promise.all([
           fetchCreatorProfile(service, creatorId),
           fetchCreatorPosts(service, creatorId)
         ]);
+        console.log(`[DEBUG] Fetched profile: ${profile.name}, posts count: ${posts.length}`);
 
         // Generate podcast RSS
+        console.log(`[DEBUG] Generating RSS...`);
         const rss = await generatePodcastRss(profile, posts);
+        console.log(`[DEBUG] RSS generated, length: ${rss.length} chars`);
 
         return new Response(rss, {
           headers: {
@@ -33,7 +47,9 @@ const server = Bun.serve({
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error(`Error generating feed for ${service}/${creatorId}:`, message);
+        const stack = error instanceof Error ? error.stack : '';
+        console.error(`[ERROR] Error generating feed for ${service}/${creatorId}:`, message);
+        console.error(`[ERROR] Stack:`, stack);
         
         return new Response(`Error: ${message}`, {
           status: 500,

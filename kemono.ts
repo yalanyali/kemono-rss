@@ -14,9 +14,14 @@ export async function fetchCreatorProfile(
   creatorId: string
 ): Promise<KemonoCreatorProfile> {
   const url = `${BASE_URL}/${service}/user/${creatorId}/profile`;
+  console.log(`[DEBUG] Fetching profile: ${url}`);
+  
   const res = await fetch(url, { headers: HEADERS });
+  console.log(`[DEBUG] Profile response: ${res.status} ${res.statusText}`);
   
   if (!res.ok) {
+    const body = await res.text();
+    console.error(`[ERROR] Profile fetch failed. Body:`, body.substring(0, 500));
     throw new Error(`Failed to fetch creator profile: ${res.status} ${res.statusText}`);
   }
   
@@ -28,9 +33,14 @@ export async function fetchCreatorPosts(
   creatorId: string
 ): Promise<KemonoPost[]> {
   const url = `${BASE_URL}/${service}/user/${creatorId}/posts`;
+  console.log(`[DEBUG] Fetching posts: ${url}`);
+  
   const res = await fetch(url, { headers: HEADERS });
+  console.log(`[DEBUG] Posts response: ${res.status} ${res.statusText}`);
   
   if (!res.ok) {
+    const body = await res.text();
+    console.error(`[ERROR] Posts fetch failed. Body:`, body.substring(0, 500));
     throw new Error(`Failed to fetch creator posts: ${res.status} ${res.statusText}`);
   }
   
