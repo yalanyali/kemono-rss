@@ -1,0 +1,14 @@
+{
+  "name": "kemono-rss",
+  "version": "1.0.0",
+  "description": "Podcast RSS feed server for Kemono creators",
+  "type": "module",
+  "scripts": {
+    "start": "bun run index.ts",
+    "dev": "bun --watch index.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/bun": "^1.1.0"
+  }
+}
