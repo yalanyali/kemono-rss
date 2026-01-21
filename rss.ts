@@ -84,10 +84,12 @@ function buildRichDescription(post: KemonoPost): string {
 
 export async function generatePodcastRss(
   profile: KemonoCreatorProfile,
-  posts: KemonoPost[]
+  posts: KemonoPost[],
+  baseUrl?: string
 ): Promise<string> {
   const channelLink = getCreatorPageUrl(profile.service, profile.id);
   const creatorName = escapeXml(profile.name);
+  const silentAudioUrl = baseUrl ? `${baseUrl}/silent.mp3` : '/silent.mp3';
   
   // Build items - each post with audio becomes an episode
   const items: string[] = [];
@@ -134,7 +136,9 @@ export async function generatePodcastRss(
       <description><![CDATA[${richDescription}]]></description>
       <pubDate>${pubDate}</pubDate>
       <guid isPermaLink="false">${post.id}</guid>
+      <enclosure url="${silentAudioUrl}" type="audio/mpeg" length="372"/>
       <itunes:author>${creatorName}</itunes:author>
+      <itunes:duration>1</itunes:duration>
     </item>`);
     }
   }

@@ -36,7 +36,8 @@ const server = Bun.serve({
 
         // Generate podcast RSS
         console.log(`[DEBUG] Generating RSS...`);
-        const rss = await generatePodcastRss(profile, posts);
+        const baseUrl = `${url.protocol}//${url.host}`;
+        const rss = await generatePodcastRss(profile, posts, baseUrl);
         console.log(`[DEBUG] RSS generated, length: ${rss.length} chars`);
 
         return new Response(rss, {
@@ -56,6 +57,17 @@ const server = Bun.serve({
           headers: { 'Content-Type': 'text/plain' }
         });
       }
+    }
+
+    // Serve silent audio file for non-audio posts
+    if (path === '/silent.mp3') {
+      const file = Bun.file('./silent.mp3');
+      return new Response(file, {
+        headers: {
+          'Content-Type': 'audio/mpeg',
+          'Cache-Control': 'public, max-age=31536000' // Cache for 1 year
+        }
+      });
     }
 
     // Home / usage info
