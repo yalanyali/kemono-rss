@@ -28,12 +28,15 @@ export async function fetchCreatorProfile(
   return res.json();
 }
 
+const PAGE_SIZE = 50; // Kemono API returns 50 posts per page
+
+// Fetch first page of posts (for syncing new posts)
 export async function fetchCreatorPosts(
   service: string,
   creatorId: string
 ): Promise<KemonoPost[]> {
   const url = `${BASE_URL}/${service}/user/${creatorId}/posts`;
-  console.log(`[DEBUG] Fetching posts: ${url}`);
+  console.log(`[DEBUG] Fetching posts (first page): ${url}`);
   
   const res = await fetch(url, { headers: HEADERS });
   console.log(`[DEBUG] Posts response: ${res.status} ${res.statusText}`);
@@ -45,6 +48,51 @@ export async function fetchCreatorPosts(
   }
   
   return res.json();
+}
+
+// Fetch ALL posts by paginating through the API
+export async function fetchAllCreatorPosts(
+  service: string,
+  creatorId: string
+): Promise<KemonoPost[]> {
+  const allPosts: KemonoPost[] = [];
+  let offset = 0;
+  let hasMore = true;
+  
+  console.log(`[DEBUG] Starting full backfill for ${service}/${creatorId}`);
+  
+  while (hasMore) {
+    const url = `${BASE_URL}/${service}/user/${creatorId}/posts?o=${offset}`;
+    console.log(`[DEBUG] Fetching posts page: ${url}`);
+    
+    const res = await fetch(url, { headers: HEADERS });
+    
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`[ERROR] Posts fetch failed at offset ${offset}. Body:`, body.substring(0, 500));
+      throw new Error(`Failed to fetch creator posts: ${res.status} ${res.statusText}`);
+    }
+    
+    const posts: KemonoPost[] = await res.json();
+    console.log(`[DEBUG] Got ${posts.length} posts at offset ${offset}`);
+    
+    if (posts.length === 0) {
+      hasMore = false;
+    } else {
+      allPosts.push(...posts);
+      offset += PAGE_SIZE;
+      
+      // Small delay to be nice to the API
+      if (hasMore && posts.length === PAGE_SIZE) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } else {
+        hasMore = false;
+      }
+    }
+  }
+  
+  console.log(`[DEBUG] Backfill complete: ${allPosts.length} total posts`);
+  return allPosts;
 }
 
 interface PostResponse {

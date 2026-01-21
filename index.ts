@@ -1,5 +1,6 @@
-import { fetchCreatorProfile, fetchCreatorPosts } from './kemono';
+import { fetchCreatorProfile, fetchCreatorPosts, fetchAllCreatorPosts } from './kemono';
 import { generatePodcastRss } from './rss';
+import { hasPostsForCreator, getPostsForCreator, savePosts, markSynced, getPostCount } from './db';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
@@ -26,13 +27,35 @@ const server = Bun.serve({
       console.log(`[DEBUG] Matched route - service: ${service}, creatorId: ${creatorId}`);
       
       try {
-        console.log(`[DEBUG] Fetching profile and posts...`);
-        // Fetch creator profile and posts in parallel
-        const [profile, posts] = await Promise.all([
-          fetchCreatorProfile(service, creatorId),
-          fetchCreatorPosts(service, creatorId)
-        ]);
-        console.log(`[DEBUG] Fetched profile: ${profile.name}, posts count: ${posts.length}`);
+        // Fetch profile
+        console.log(`[DEBUG] Fetching profile...`);
+        const profile = await fetchCreatorProfile(service, creatorId);
+        console.log(`[DEBUG] Fetched profile: ${profile.name}`);
+
+        // Check if we have posts in DB
+        const hasCachedPosts = hasPostsForCreator(service, creatorId);
+        console.log(`[DEBUG] Has cached posts: ${hasCachedPosts}`);
+        
+        if (!hasCachedPosts) {
+          // No posts in DB - do full backfill
+          console.log(`[DEBUG] No cached posts, starting full backfill...`);
+          const allPosts = await fetchAllCreatorPosts(service, creatorId);
+          const saved = savePosts(allPosts);
+          console.log(`[DEBUG] Backfill complete, saved ${saved} posts to DB`);
+        } else {
+          // Has cached posts - fetch first page and merge new posts
+          console.log(`[DEBUG] Syncing new posts from first page...`);
+          const firstPagePosts = await fetchCreatorPosts(service, creatorId);
+          const saved = savePosts(firstPagePosts);
+          console.log(`[DEBUG] Synced ${saved} posts from first page`);
+        }
+        
+        // Mark as synced
+        markSynced(service, creatorId);
+        
+        // Load all posts from DB
+        const posts = getPostsForCreator(service, creatorId);
+        console.log(`[DEBUG] Loaded ${posts.length} posts from DB`);
 
         // Generate podcast RSS
         console.log(`[DEBUG] Generating RSS...`);
